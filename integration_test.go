@@ -82,7 +82,7 @@ func TestGenRec(t *testing.T) {
 			`{"ret":"33;\"2006-08-26 00:00:00\";\"xxx\""}`},
 		{"rec_tab_in", `{"tab":[{"num":1,"text":"A","dt":"2006-08-26T00:00:00+01:00"},{"num":2,"text":"B"},{"num":3,"text":"C"}]}`,
 			`{"ret":"\n1;\"2006-08-26 00:00:00\";\"A\"\n2;\"0001-01-01 00:00:00\";\"B\"\n3;\"0001-01-01 00:00:00\";\"C\""}`},
-		{"rec_sendpreoffer_31101", `{"p_vonalkod":1}`, `{"p_vonalkod":1,"p_hiba_kod":0,"p_hiba_szov":""}`},
+		{"rec_sendpreoffer_31101", `{"p_vonalkod":1}`, `{"p_vonalkod":1,"p_kotveny":{"dijkod":"","evfordulo_tipus":"","dijfizmod":"","dijbekerot_ker":"","dijfizgyak":"","szamlaszam":"","e_komm_email":""},"p_hiba_kod":0,"p_hiba_szov":""}`},
 	} {
 		got := runTest(t, outFn, "-connect="+*flagConnect, "TST_oracall."+todo[0], todo[1])
 		if strings.Index(todo[2], "{{NOW}}") >= 0 {
@@ -240,7 +240,6 @@ FUNCTION rec_tab_in(tab IN mix_tab_typ) RETURN VARCHAR2;
                                p_vegleges IN VARCHAR2 DEFAULT 'N',
                                p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
                                p_vonalkod IN OUT PLS_INTEGER,
-/*
                                p_kotveny IN OUT kotveny_rec_typ,
                                p_szerzodo IN mod_ugyfel_rec_typ,
                                p_szerzodo_cim IN mod_cim_rec_typ,
@@ -252,6 +251,7 @@ FUNCTION rec_tab_in(tab IN mix_tab_typ) RETURN VARCHAR2;
                                p_gepjarmu IN OUT gepjarmu_rec_typ,
                                p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
                                p_kedvezmenyek IN kedvezmeny_tab_typ,
+/*
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
@@ -365,7 +365,6 @@ END sum_nums;
                                p_vegleges IN VARCHAR2 DEFAULT 'N',
                                p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
                                p_vonalkod IN OUT PLS_INTEGER,
-/*
                                p_kotveny IN OUT kotveny_rec_typ,
                                p_szerzodo IN mod_ugyfel_rec_typ,
                                p_szerzodo_cim IN mod_cim_rec_typ,
@@ -377,6 +376,7 @@ END sum_nums;
                                p_gepjarmu IN OUT gepjarmu_rec_typ,
                                p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
                                p_kedvezmenyek IN kedvezmeny_tab_typ,
+/*
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
