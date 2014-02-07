@@ -250,13 +250,12 @@ FUNCTION rec_tab_in(tab IN mix_tab_typ) RETURN VARCHAR2;
                                p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
                                p_gepjarmu IN OUT gepjarmu_rec_typ,
                                p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
-                               p_kedvezmenyek IN kedvezmeny_tab_typ,
-/*
+--                               p_kedvezmenyek IN kedvezmeny_tab_typ,
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
-                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
-*/
+--                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
+
                                p_evesdij OUT NUMBER,
 --                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
@@ -375,13 +374,11 @@ END sum_nums;
                                p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
                                p_gepjarmu IN OUT gepjarmu_rec_typ,
                                p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
-                               p_kedvezmenyek IN kedvezmeny_tab_typ,
-/*
+--                               p_kedvezmenyek IN kedvezmeny_tab_typ,
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
-                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
-*/
+--                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
                                p_evesdij OUT NUMBER,
 --                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
