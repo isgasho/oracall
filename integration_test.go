@@ -18,12 +18,14 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"reflect"
 	"strings"
 	"sync"
 	"testing"
@@ -82,13 +84,13 @@ func TestGenRec(t *testing.T) {
 			`{"ret":"33;\"2006-08-26 00:00:00\";\"xxx\""}`},
 		{"rec_tab_in", `{"tab":[{"num":1,"text":"A","dt":"2006-08-26T00:00:00+01:00"},{"num":2,"text":"B"},{"num":3,"text":"C"}]}`,
 			`{"ret":"\n1;\"2006-08-26 00:00:00\";\"A\"\n2;\"0001-01-01 00:00:00\";\"B\"\n3;\"0001-01-01 00:00:00\";\"C\""}`},
-		{"rec_sendpreoffer_31101", `{"p_vonalkod":1}`, `{"p_vonalkod":1,"p_kotveny":{"dijkod":"","evfordulo_tipus":"","dijfizmod":"","dijbekerot_ker":"","dijfizgyak":"","szamlaszam":"","e_komm_email":""},"p_hiba_kod":0,"p_hiba_szov":""}`},
+		{"rec_sendpreoffer_31101", `{"p_vonalkod":1}`, `{"p_vonalkod":1,"p_kotveny":{"szamlaszam":"","evfordulo_tipus":"","dijfizgyak":"","dijkod":"","e_komm_email":"","dijbekerot_ker":"","dijfizmod":""},"p_kotveny_gfb":{},"p_gepjarmu":{"uzjelleg":"","alvazszam":"","gyartmany":"","jelleg":"","rendszam":"","gyartev":"","tulajdon_visz":""},"p_ajanlat_url":"","p_hiba_kod":0,"p_hiba_szov":""}`},
 	} {
 		got := runTest(t, outFn, "-connect="+*flagConnect, "TST_oracall."+todo[0], todo[1])
 		if strings.Index(todo[2], "{{NOW}}") >= 0 {
 			todo[2] = strings.Replace(todo[2], "{{NOW}}", time.Now().Format(time.RFC3339), -1)
 		}
-		if strings.TrimSpace(got) != todo[2] {
+		if !jsonEqual(strings.TrimSpace(got), todo[2]) {
 			t.Errorf("%d. awaited\n\t%s\ngot\n\t%s", i, todo[2], got)
 		}
 	}
@@ -254,10 +256,10 @@ FUNCTION rec_tab_in(tab IN mix_tab_typ) RETURN VARCHAR2;
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
---                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
+                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
 
                                p_evesdij OUT NUMBER,
---                               p_hibalista OUT hiba_tab_typ,
+                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
                                p_hiba_szov OUT VARCHAR2);
 
@@ -378,9 +380,9 @@ END sum_nums;
                                p_dump_args# IN VARCHAR2,
                                p_szerz_azon OUT PLS_INTEGER,
                                p_ajanlat_url OUT VARCHAR2,
---                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
+                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
                                p_evesdij OUT NUMBER,
---                               p_hibalista OUT hiba_tab_typ,
+                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
                                p_hiba_szov OUT VARCHAR2) IS
   BEGIN
@@ -502,4 +504,15 @@ func getConnection(t *testing.T) oracle.Connection {
 		log.Panicf("error connecting: %s", err)
 	}
 	return conn
+}
+
+func jsonEqual(a, b string) bool {
+	var aI, bI interface{}
+	if err := json.Unmarshal([]byte(a), &aI); err != nil {
+		log.Panicf("error unmarshaling %s: %v", a, err)
+	}
+	if err := json.Unmarshal([]byte(b), &bI); err != nil {
+		log.Panicf("error unmarshaling %s: %v", b, err)
+	}
+	return reflect.DeepEqual(aI, bI)
 }
