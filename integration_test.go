@@ -84,7 +84,7 @@ func TestGenRec(t *testing.T) {
 			`{"ret":"33;\"2006-08-26 00:00:00\";\"xxx\""}`},
 		{"rec_tab_in", `{"tab":[{"num":1,"text":"A","dt":"2006-08-26T00:00:00+01:00"},{"num":2,"text":"B"},{"num":3,"text":"C"}]}`,
 			`{"ret":"\n1;\"2006-08-26 00:00:00\";\"A\"\n2;\"0001-01-01 00:00:00\";\"B\"\n3;\"0001-01-01 00:00:00\";\"C\""}`},
-		{"rec_sendpreoffer_31101", `{"p_vonalkod":1}`, `{"p_vonalkod":1,"p_kotveny":{"szamlaszam":"","evfordulo_tipus":"","dijfizgyak":"","dijkod":"","e_komm_email":"","dijbekerot_ker":"","dijfizmod":""},"p_kotveny_gfb":{},"p_gepjarmu":{"uzjelleg":"","alvazszam":"","gyartmany":"","jelleg":"","rendszam":"","gyartev":"","tulajdon_visz":""},"p_ajanlat_url":"","p_hiba_kod":0,"p_hiba_szov":""}`},
+		{"rec_sendpreoffer_31101", `{"p_vonalkod":1,"p_kedvezmenyek":["KEDV01"]}`, `{"p_vonalkod":1,"p_kotveny":{"szamlaszam":"","evfordulo_tipus":"","dijfizgyak":"","dijkod":"","e_komm_email":"","dijbekerot_ker":"","dijfizmod":""},"p_kotveny_gfb":{},"p_gepjarmu":{"uzjelleg":"","alvazszam":"","gyartmany":"","jelleg":"","rendszam":"","gyartev":"","tulajdon_visz":""},"p_ajanlat_url":"","p_hiba_kod":0,"p_hiba_szov":""}`},
 	} {
 		got := runTest(t, outFn, "-connect="+*flagConnect, "TST_oracall."+todo[0], todo[1])
 		if strings.Index(todo[2], "{{NOW}}") >= 0 {
@@ -237,29 +237,29 @@ FUNCTION simple_sum_nums(nums IN num_tab_typ, outnums OUT num_tab_typ) RETURN NU
 FUNCTION rec_in(rec IN mix_rec_typ) RETURN VARCHAR2;
 FUNCTION rec_tab_in(tab IN mix_tab_typ) RETURN VARCHAR2;
 
-  PROCEDURE rec_sendPreOffer_31101(p_sessionid IN VARCHAR2,
-                               p_lang IN VARCHAR2,
-                               p_vegleges IN VARCHAR2 DEFAULT 'N',
-                               p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
-                               p_vonalkod IN OUT PLS_INTEGER,
-                               p_kotveny IN OUT kotveny_rec_typ,
-                               p_szerzodo IN mod_ugyfel_rec_typ,
-                               p_szerzodo_cim IN mod_cim_rec_typ,
-                               p_szerzodo_levelcim IN mod_cim_rec_typ,
-                               p_engedmenyezett IN mod_ugyfel_rec_typ,
-                               p_engedmenyezett_cim IN mod_cim_rec_typ,
-                               p_engedmeny IN engedmeny_rec_typ,
-                               p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
-                               p_gepjarmu IN OUT gepjarmu_rec_typ,
-                               p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
---                               p_kedvezmenyek IN kedvezmeny_tab_typ,
-                               p_dump_args# IN VARCHAR2,
-                               p_szerz_azon OUT PLS_INTEGER,
-                               p_ajanlat_url OUT VARCHAR2,
-                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
-
-                               p_evesdij OUT NUMBER,
-                               p_hibalista OUT hiba_tab_typ,
+  PROCEDURE rec_sendPreOffer_31101(
+--                               p_sessionid IN VARCHAR2,
+--                               p_lang IN VARCHAR2,
+--                               p_vegleges IN VARCHAR2 DEFAULT 'N',
+--                               p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
+--                               p_vonalkod IN OUT PLS_INTEGER,
+--                               p_kotveny IN OUT kotveny_rec_typ,
+--                               p_szerzodo IN mod_ugyfel_rec_typ,
+--                               p_szerzodo_cim IN mod_cim_rec_typ,
+--                               p_szerzodo_levelcim IN mod_cim_rec_typ,
+--                               p_engedmenyezett IN mod_ugyfel_rec_typ,
+--                               p_engedmenyezett_cim IN mod_cim_rec_typ,
+--                               p_engedmeny IN engedmeny_rec_typ,
+--                               p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
+--                               p_gepjarmu IN OUT gepjarmu_rec_typ,
+--                               p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
+                               p_kedvezmenyek IN kedvezmeny_tab_typ,
+--                               p_dump_args# IN VARCHAR2,
+--                               p_szerz_azon OUT PLS_INTEGER,
+--                               p_ajanlat_url OUT VARCHAR2,
+--                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
+--                               p_evesdij OUT NUMBER,
+--                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
                                p_hiba_szov OUT VARCHAR2);
 
@@ -269,7 +269,7 @@ END TST_oracall;`)
 PROCEDURE simple_char_in(txt IN VARCHAR2) IS
   v_txt VARCHAR2(1000) := SUBSTR(txt, 1, 100);
 BEGIN NULL; END simple_char_in;
-FUNCTION simple_char_out RETURN VArCHAR2 IS BEGIN RETURN('A'); END simple_char_out;
+FUNCTION simple_char_out RETURN VARCHAR2 IS BEGIN RETURN('A'); END simple_char_out;
 
 PROCEDURE simple_num_in(num IN NUMBER) IS
   v_num NUMBER := num;
@@ -361,28 +361,29 @@ BEGIN
   RETURN(s);
 END sum_nums;
 
-  PROCEDURE rec_sendPreOffer_31101(p_sessionid IN VARCHAR2,
-                               p_lang IN VARCHAR2,
-                               p_vegleges IN VARCHAR2 DEFAULT 'N',
-                               p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
-                               p_vonalkod IN OUT PLS_INTEGER,
-                               p_kotveny IN OUT kotveny_rec_typ,
-                               p_szerzodo IN mod_ugyfel_rec_typ,
-                               p_szerzodo_cim IN mod_cim_rec_typ,
-                               p_szerzodo_levelcim IN mod_cim_rec_typ,
-                               p_engedmenyezett IN mod_ugyfel_rec_typ,
-                               p_engedmenyezett_cim IN mod_cim_rec_typ,
-                               p_engedmeny IN engedmeny_rec_typ,
-                               p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
-                               p_gepjarmu IN OUT gepjarmu_rec_typ,
-                               p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
---                               p_kedvezmenyek IN kedvezmeny_tab_typ,
-                               p_dump_args# IN VARCHAR2,
-                               p_szerz_azon OUT PLS_INTEGER,
-                               p_ajanlat_url OUT VARCHAR2,
-                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
-                               p_evesdij OUT NUMBER,
-                               p_hibalista OUT hiba_tab_typ,
+  PROCEDURE rec_sendPreOffer_31101(
+--                               p_sessionid IN VARCHAR2,
+--                               p_lang IN VARCHAR2,
+--                               p_vegleges IN VARCHAR2 DEFAULT 'N',
+--                               p_elso_csekk_atadva IN VARCHAR2 DEFAULT 'N',
+--                               p_vonalkod IN OUT PLS_INTEGER,
+--                               p_kotveny IN OUT kotveny_rec_typ,
+--                               p_szerzodo IN mod_ugyfel_rec_typ,
+--                               p_szerzodo_cim IN mod_cim_rec_typ,
+--                               p_szerzodo_levelcim IN mod_cim_rec_typ,
+--                               p_engedmenyezett IN mod_ugyfel_rec_typ,
+--                               p_engedmenyezett_cim IN mod_cim_rec_typ,
+--                               p_engedmeny IN engedmeny_rec_typ,
+--                               p_kotveny_gfb IN OUT NOCOPY kotveny_gfb_rec_typ,
+--                               p_gepjarmu IN OUT gepjarmu_rec_typ,
+--                               p_bonusz_elozmeny IN bonusz_elozmeny_rec_typ,
+                               p_kedvezmenyek IN kedvezmeny_tab_typ,
+--                               p_dump_args# IN VARCHAR2,
+--                               p_szerz_azon OUT PLS_INTEGER,
+--                               p_ajanlat_url OUT VARCHAR2,
+--                               p_szamolt_dijtetelek OUT nevszam_tab_typ,
+--                               p_evesdij OUT NUMBER,
+--                               p_hibalista OUT hiba_tab_typ,
                                p_hiba_kod OUT PLS_INTEGER,
                                p_hiba_szov OUT VARCHAR2) IS
   BEGIN
@@ -455,7 +456,13 @@ func generateAndBuild(t *testing.T, prefix string) (outFn string) {
 		outFh.Close()
 	}
 	os.Remove(outFn)
-	runCommand(t, "go", "build", "-o="+outFn, "./testdata/integration_test")
+	args := make([]string, 2, 4)
+	args[0], args[1] = "build", "-o="+outFn
+	if *flagTrace {
+		args = append(args, "-tags=trace")
+	}
+	args = append(args, "./testdata/integration_test")
+	runCommand(t, "go", args...)
 	return
 }
 
@@ -477,10 +484,12 @@ func runTest(t *testing.T, prog string, args ...string) string {
 
 //var dsn = flag.String("connect", "", "Oracle DSN (user/passw@sid)")
 var dbg = flag.Bool("debug", false, "print debug messages?")
+var flagTrace = flag.Bool("trace", false, "do a TRACE build?")
 var buildOnce sync.Once
 
 func init() {
 	flag.Parse()
+	*flagTrace = true
 }
 
 var conn oracle.Connection
