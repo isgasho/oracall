@@ -117,12 +117,13 @@ func (fun Function) PlsqlBlock() (plsql, callFun string) {
 	for _, line := range convIn {
 		io.WriteString(callBuf, line+"\n")
 	}
-	i := strings.Index(call, fun.Name())
-	j := i + strings.Index(call[i:], ")") + 1
-	log.Printf("i=%d j=%d call=\n%s", i, j, call)
-	fmt.Fprintf(callBuf, "\nif true || DebugLevel > 0 { log.Printf(`calling %s\n\twith %%#v`, params) }"+`
+	//i := strings.Index(call, fun.Name())
+	//j := i + strings.Index(call[i:], ")") + 1
+	//log.Printf("i=%d j=%d call=\n%s", i, j, call)
+	fmt.Fprintf(callBuf, `
+    if DebugLevel > 0 { log.Printf(`+"`calling %s\n\twith %%s`"+`, params) }
     if err = cur.Execute(%s, nil, params); err != nil { return }
-    `, call[i:j], fun.getPlsqlConstName())
+    `, call, fun.getPlsqlConstName())
 	for _, line := range convOut {
 		io.WriteString(callBuf, line+"\n")
 	}
@@ -534,9 +535,10 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
                     err = fmt.Errorf("error creating new var from %s(%%v): %%s", a, err)
                     return
                 }
+                if DebugLevel > 0 { log.Printf("%s=%%v (%%T)", a, a) }
                 }
                     `,
-					subGoType, name, subGoType, subGoType, name, name, name))
+					subGoType, name, subGoType, subGoType, name, name, name, name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}
@@ -685,7 +687,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 				fmt.Sprintf(`{
                 var a []%s
                 if len(input.%s) == 0 {
-                    a = make([]%s, 0)
+                     a = make([]%s, 0)
                 } else {
                     a = make([]%s, len(input.%s))
                     for i, x := range input.%s {
@@ -696,10 +698,11 @@ func (arg Argument) getConvRec(convIn, convOut []string,
                     err = fmt.Errorf("error creating new var from %s(%%v): %%s", a, err)
                     return
                 }
+                if DebugLevel > 0 { log.Printf("%s=%%v (%%T)", a, a) }
                 }
                     `,
 					subGoType, name, subGoType, subGoType, name, name,
-					capitalize(key), capitalize(key), name))
+					capitalize(key), capitalize(key), name, name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}
