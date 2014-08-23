@@ -31,72 +31,36 @@ const MaxTableSize = 1000
 //
 // OracleArgument
 //
-/*
-func oracleVarType(typ string) *oracle.VariableType {
-	switch typ {
-	case "BINARY_INTEGER", "PLS_INTEGER":
-		return oracle.Int32VarType
-	case "STRING", "VARCHAR2":
-		return oracle.StringVarType
-	case "INTEGER":
-		return oracle.Int64VarType
-	case "ROWID":
-		return oracle.RowidVarType
-	case "REF CURSOR":
-		return oracle.CursorVarType
-	//case "TIMESTAMP":
-	//return oracle.TimestampVarType
-	case "NUMBER":
-		return oracle.FloatVarType
-	case "DATE":
-		return oracle.DateTimeVarType
-	case "BLOB":
-		return oracle.BlobVarType
-	case "CHAR":
-		return oracle.FixedCharVarType
-	case "BINARY":
-		return oracle.BinaryVarType
-	case "CLOB":
-		return oracle.ClobVarType
-	case "BOOLEAN", "PL/SQL BOOLEAN":
-		return oracle.BooleanVarType
-	default:
-		glog.Fatalf("oracleVarType: unknown variable type %q", typ)
-	}
-	return nil
-}
-*/
-
 var stringTypes = make(map[string]struct{}, 16)
 
 func oracleVarTypeName(typ string) string {
 	switch typ {
 	case "BINARY_INTEGER", "PLS_INTEGER":
-		return "oracle.Int32VarType"
+		return "int32"
 	case "STRING", "VARCHAR2":
-		return "oracle.StringVarType"
+		return "string"
 	case "INTEGER":
-		return "oracle.Int64VarType"
+		return "int64"
 	case "ROWID":
-		return "oracle.RowidVarType"
+		return "string"
 	case "REF CURSOR":
-		return "oracle.CursorVarType"
+		return "gocilib.Cursor"
 	//case "TIMESTAMP":
-	//return oracle.TimestampVarType
+	//return "time.Time"
 	case "NUMBER":
-		return "oracle.FloatVarType"
+		return "float64"
 	case "DATE":
-		return "oracle.DateTimeVarType"
+		return "time.Time"
 	case "BLOB":
-		return "oracle.BlobVarType"
+		return "gocilib.LOB"
 	case "CHAR":
-		return "oracle.FixedCharVarType"
+		return "string"
 	case "BINARY":
-		return "oracle.BinaryVarType"
+		return "string"
 	case "CLOB":
-		return "oracle.ClobVarType"
+		return "gocilib.LOB"
 	case "BOOLEAN", "PL/SQL BOOLEAN":
-		return "oracle.BooleanVarType"
+		return "bool"
 	default:
 		glog.Fatalf("oracleVarTypeName: unknown variable type %q", typ)
 	}
@@ -111,7 +75,7 @@ func (fun Function) PlsqlBlock() (plsql, callFun string) {
 	}
 	fn := strings.Replace(fun.Name(), ".", "__", -1)
 	callBuf := bytes.NewBuffer(make([]byte, 0, 16384))
-	fmt.Fprintf(callBuf, `func Call_%s(cur *oracle.Cursor, input %s) (output %s, err error) {
+	fmt.Fprintf(callBuf, `func Call_%s(cx *gocilib.Connection, input %s) (output %s, err error) {
     if err = input.Check(); err != nil {
         return
     }
@@ -124,7 +88,10 @@ func (fun Function) PlsqlBlock() (plsql, callFun string) {
 	j := i + strings.Index(call[i:], ")") + 1
 	glog.V(2).Infof("i=%d j=%d call=\n%s", i, j, call)
 	fmt.Fprintf(callBuf, "\nif true || DebugLevel > 0 { log.Printf(`calling %s\n\twith %%#v`, params) }"+`
-    if err = cur.Execute(%s, nil, params); err != nil { return }
+	var stmt *gocilib.Statement
+	if stmt, err = cx.NewPreparedStatement(%s); err != nil { return }
+	defer stmt.Close()
+    if err = stmt.BindExecute("", nil, params); err != nil { return }
     `, call[i:j], fun.getPlsqlConstName())
 	for _, line := range convOut {
 		io.WriteString(callBuf, line+"\n")
@@ -188,7 +155,7 @@ func (fun Function) prepareCall() (decls, pre []string, call string, post []stri
 		ok           bool
 	)
 	decls = append(decls, "i1 PLS_INTEGER;", "i2 PLS_INTEGER;")
-	convIn = append(convIn, "var v *oracle.Variable\nvar x interface{}\n _, _ = v, x")
+	convIn = append(convIn, "var v interface{}\nvar x interface{}\n _, _ = v, x")
 
 	var args []Argument
 	if fun.Returns != nil {
@@ -418,7 +385,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 			if strings.HasSuffix(got, "__cur") {
 				outConv = fmt.Sprintf(`output.%s = %s{y}`, name, got)
 				if arg.Type == "REF CURSOR" {
-					pTyp = "*oracle.Cursor"
+					pTyp = "*gocilib.Resultset"
 				}
 			} else if got == "string" {
 				outConv = fmt.Sprintf(`output.%s = y`, name)
@@ -430,7 +397,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 			}
 			convOut = append(convOut,
 				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"].(*oracle.Variable)
+                v = params["%s"]
                 if err = v.GetValueInto(&x, 0); err != nil {
                     err = fmt.Errorf("error getting value of %s: %%s", err)
                     return
@@ -455,7 +422,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
                 }`, name, name, name, name, name, name, got, name)
 			convOut = append(convOut,
 				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"].(*oracle.Variable)
+                v = params["%s"]
                 %s
                 for i := 0; i < v.Len(); i++ {
                     if err = v.GetValueInto(&x, uint(i)); err != nil {
@@ -639,7 +606,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 			}
 			convOut = append(convOut,
 				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"].(*oracle.Variable)
+                v = params["%s"]
                 if err = v.GetValueInto(&x, 0); err != nil {
                     err = fmt.Errorf("error getting value of %s: %%s", err)
                     return
@@ -659,7 +626,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 			}
 			convOut = append(convOut,
 				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"].(*oracle.Variable)
+                v = params["%s"]
                 for i := 0; i < v.Len(); i++ {
                     if err = v.GetValueInto(&x, uint(i)); err != nil {
                         err = fmt.Errorf("error getting %%d. value into %s%s: %%s", i, err)

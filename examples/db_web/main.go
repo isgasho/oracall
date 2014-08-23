@@ -35,7 +35,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/tgulacsi/goracle/oracle"
+	"github.com/tgulacsi/gocilib"
 )
 
 var (

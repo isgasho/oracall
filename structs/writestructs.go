@@ -18,11 +18,11 @@ package structs
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"go/format"
 	"io"
 	"log"
-	"errors"
 	"strings"
 
 	"github.com/golang/glog"
@@ -46,21 +46,21 @@ import (
 	"strconv"
     "time"    // for datetimes
 
-    "github.com/tgulacsi/goracle/oracle"    // Oracle
+    "github.com/tgulacsi/gocilib"    // Oracle
 )
 
 var DebugLevel = uint(0)
 
 // against "unused import" error
 var _ time.Time
-var _ oracle.Cursor
+var _ gocilib.Connection
 var _ strconv.NumError
 var _ strings.Reader
 var _ = errors.New
 
 // FunctionCaller is a function which calls the stored procedure with
 // the input struct, and returns the output struct as an interface{}
-type FunctionCaller func(*oracle.Cursor, interface{}) (interface{}, error)
+type FunctionCaller func(*gocilib.Connection, interface{}) (interface{}, error)
 
 // Functions is the map of function name -> function
 var Functions = make(map[string]FunctionCaller, %d)
@@ -82,7 +82,7 @@ var InputFactories = make(map[string](func() Unmarshaler), %d)
 	types := make(map[string]string, 16)
 	inits := make([]string, 0, len(functions))
 	var b []byte
-	FunLoop:
+FunLoop:
 	for _, fun := range functions {
 		fun.types = types
 		for _, dir := range []bool{false, true} {
@@ -120,7 +120,7 @@ var InputFactories = make(map[string](func() Unmarshaler), %d)
 		}
 		inpstruct := fun.getStructName(false)
 		inits = append(inits,
-			fmt.Sprintf("\t"+`Functions["%s"] = func(cur *oracle.Cursor, input interface{}) (interface{}, error) {
+			fmt.Sprintf("\t"+`Functions["%s"] = func(cur *gocilib.Connection, input interface{}) (interface{}, error) {
         var inp %s
         switch x := input.(type) {
         case *%s: inp = *x
@@ -391,7 +391,7 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 	if arg.Flavor == FLAVOR_SIMPLE {
 		switch arg.Type {
 		case "CHAR", "VARCHAR2":
-			return "string"  // NULL is the same as the empty string for Oracle
+			return "string" // NULL is the same as the empty string for Oracle
 		case "NUMBER":
 			return "*float64"
 		case "INTEGER":
@@ -403,7 +403,7 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		case "DATE", "DATETIME", "TIME", "TIMESTAMP":
 			return "*time.Time"
 		case "REF CURSOR":
-			return "*oracle.Cursor"
+			return "*gocilib.Connection"
 		case "CLOB", "BLOB":
 			return "*oracle.ExternalLobVar"
 		case "ROWID":
@@ -437,8 +437,8 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		}
 		if _, ok := typedefs[cn]; !ok {
 			var buf bytes.Buffer
-			buf.WriteString("\ntype " + cn + " struct { *oracle.Cursor }\n")
-			buf.WriteString("func New" + cn + "(cur *oracle.Cursor) (" + cn + ", error) {\n return " + cn + "{cur}, nil\n }")
+			buf.WriteString("\ntype " + cn + " struct { *gocilib.Statement }\n")
+			buf.WriteString("func New" + cn + "(cur *gocilib.Statement) (" + cn + ", error) {\n return " + cn + "{cur}, nil\n }")
 			typedefs[cn] = buf.String()
 		}
 		//typedefs["+"+arg.TableOf.Name] = "REF CURSOR"

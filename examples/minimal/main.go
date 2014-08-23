@@ -32,7 +32,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/tgulacsi/goracle/oracle"
+	"github.com/tgulacsi/gocilib"
 )
 
 var flagConnect = flag.String("connect", "", "Oracle database connection string")
