@@ -38,6 +38,7 @@ func SaveFunctions(dst io.Writer, functions []Function, pkg string, skipFormatti
 		if _, err = fmt.Fprintf(dst,
 			"package "+pkg+`
 import (
+	"database/sql/driver"
     "encoding/json"
     "errors"
     "log"
@@ -57,6 +58,7 @@ var _ gocilib.Connection
 var _ strconv.NumError
 var _ strings.Reader
 var _ = errors.New
+var _ driver.Value
 
 // FunctionCaller is a function which calls the stored procedure with
 // the input struct, and returns the output struct as an interface{}

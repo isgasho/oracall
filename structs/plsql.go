@@ -67,6 +67,34 @@ func oracleVarTypeName(typ string) string {
 	return ""
 }
 
+func oracleVarZero(typ string) string {
+	switch typ {
+	case "BINARY_INTEGER", "PLS_INTEGER":
+		return "int32(0)"
+	case "STRING", "VARCHAR2", "CHAR", "BINARY":
+		return "\"\""
+	case "INTEGER":
+		return "int64(0)"
+	case "ROWID":
+		return "\"\""
+	case "REF CURSOR":
+		return "*gocilib.Cursor(nil)"
+	//case "TIMESTAMP":
+	//return "time.Time"
+	case "NUMBER":
+		return "float64(0)"
+	case "DATE":
+		return "time.Time{}"
+	case "BLOB", "CLOB":
+		return "*gocilib.LOB(nil)"
+	case "BOOLEAN", "PL/SQL BOOLEAN":
+		return "false"
+	default:
+		glog.Fatalf("oracleVarTypeName: unknown variable type %q", typ)
+	}
+	return ""
+}
+
 // SavePlsqlBlock saves the plsql block definition into writer
 func (fun Function) PlsqlBlock() (plsql, callFun string) {
 	decls, pre, call, post, convIn, convOut, err := fun.prepareCall()
@@ -79,7 +107,7 @@ func (fun Function) PlsqlBlock() (plsql, callFun string) {
     if err = input.Check(); err != nil {
         return
     }
-    params := make(map[string]interface{}, %d)
+    params := make(map[string]driver.Value, %d)
     `, fn, fun.getStructName(false), fun.getStructName(true), len(fun.Args)+1)
 	for _, line := range convIn {
 		io.WriteString(callBuf, line+"\n")
@@ -155,7 +183,7 @@ func (fun Function) prepareCall() (decls, pre []string, call string, post []stri
 		ok           bool
 	)
 	decls = append(decls, "i1 PLS_INTEGER;", "i2 PLS_INTEGER;")
-	convIn = append(convIn, "var v interface{}\nvar x interface{}\n _, _ = v, x")
+	convIn = append(convIn, "var v driver.Value\nvar x interface{}\n _, _ = v, x")
 
 	var args []Argument
 	if fun.Returns != nil {
@@ -371,11 +399,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 	}
 	if arg.IsOutput() {
 		convIn = append(convIn,
-			fmt.Sprintf(`if v, err = cur.NewVariable(%d, %s, %d); err != nil {
-                    err = fmt.Errorf("error creating variable for type %s: %%s", err)
-                    return
-                }`,
-				tableSize, oracleVarTypeName(arg.Type), arg.Charlength, arg.Type))
+			fmt.Sprintf(`v = new(%s)`, oracleVarTypeName(arg.Type)))
 		pTyp := got
 		if pTyp[0] == '*' {
 			pTyp = pTyp[1:]
@@ -477,16 +501,11 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 				convIn = append(convIn, preconcept2)
 			}
 			convIn = append(convIn,
-				fmt.Sprintf(`if input.%s != `+nilS+` {
-                        v, err = cur.NewVar(`+deRef+`input.%s)
-                    } else {
-                        v, err = cur.NewVariable(%d, %s, %d)
-                    }
-                    if err != nil {
-                        err = fmt.Errorf("error creating new var from %s: %%s", err)
-                        return
-                    }`,
-					name, name, tableSize, oracleVarTypeName(arg.Type), 0, name))
+				fmt.Sprintf(`if input.%s == `+nilS+` {
+						input.%s = new(%s)
+					}
+					v = &input.%s`,
+					name, name, oracleVarTypeName(arg.Type), name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "} else { v = nil }")
 			}
@@ -509,13 +528,10 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
                         if x != `+nilS+` { a[i] = `+deRef+`x }
                     }
                 }
-                if v, err = cur.NewVar(a); err != nil {
-                    err = fmt.Errorf("error creating new var from %s(%%v): %%s", a, err)
-                    return
-                }
+                v = a
                 }
                     `,
-					subGoType, name, subGoType, subGoType, name, name, name))
+					subGoType, name, subGoType, subGoType, name, name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}
@@ -585,11 +601,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 	}
 	if arg.IsOutput() {
 		convIn = append(convIn,
-			fmt.Sprintf(`if v, err = cur.NewVariable(%d, %s, %d); err != nil {
-                    err = fmt.Errorf("error creating variable for type %s: %%s", err)
-                    return
-                }`,
-				tableSize, oracleVarTypeName(arg.Type), arg.Charlength, arg.Type))
+			fmt.Sprintf(`v = new(%s)`, oracleVarTypeName(arg.Type)))
 		pTyp := got
 		if pTyp[0] == '*' {
 			pTyp = pTyp[1:]
@@ -680,15 +692,11 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 			}
 			convIn = append(convIn,
 				fmt.Sprintf(`if input.%s != `+nilS+` {
-                        v, err = cur.NewVar(`+deRef+`input.%s)
+                        v = input.%s
                     } else {
-                        v, err = cur.NewVariable(%d, %s, %d)
-                    }
-                    if err != nil {
-                        err = fmt.Errorf("error creating new var from %s: %%s", err)
-                        return
-                    }`,
-					name, name, tableSize, oracleVarTypeName(arg.Type), 0, name))
+                        v = %s
+					}`,
+					name, name, oracleVarZero(arg.Type)))
 			if preconcept2 != "" {
 				convIn = append(convIn, "} else { v = nil }")
 			}
@@ -711,14 +719,11 @@ func (arg Argument) getConvRec(convIn, convOut []string,
                         if x != nil && x.%s != `+nilS+` { a[i] = `+deRef+`(x.%s) }
                     }
                 }
-                if v, err = cur.NewVar(a); err != nil {
-                    err = fmt.Errorf("error creating new var from %s(%%v): %%s", a, err)
-                    return
-                }
+                v = a
                 }
                     `,
 					subGoType, name, subGoType, subGoType, name, name,
-					capitalize(key), capitalize(key), name))
+					capitalize(key), capitalize(key)))
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}
