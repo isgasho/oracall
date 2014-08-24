@@ -32,7 +32,7 @@ import (
 	"os"
 
 	"github.com/davecgh/go-spew/spew"
-	"github.com/tgulacsi/goracle/oracle"
+	"github.com/tgulacsi/gocilib"
 )
 
 var flagConnect = flag.String("connect", "", "Oracle database connection string")
@@ -73,22 +73,15 @@ func main() {
 	log.Printf("calling %s(%#v)", funName, inp)
 
 	// get cursor
-	user, passw, sid := oracle.SplitDSN(*flagConnect)
-	conn, err := oracle.NewConnection(user, passw, sid, false)
+	user, passw, sid := gocilib.SplitDSN(*flagConnect)
+	conn, err := gocilib.NewConnection(user, passw, sid)
 	if err != nil {
 		log.Fatalf("error creating connection to %s: %s", *flagConnect, err)
 	}
-	if err = conn.Connect(0, false); err != nil {
-		log.Fatalf("error connecting: %s", err)
-	}
 	defer conn.Close()
-	cur := oracle.NewCursor(conn)
-	defer cur.Close()
-
-	oracle.BypassMultipleArgs = *flagBypassMultipleArgs
 
 	// call the function
-	out, err := fun(cur, inp)
+	out, err := fun(conn, inp)
 	if err != nil {
 		log.Fatalf("error calling %s(%s): %s", funName, inp, err)
 	}

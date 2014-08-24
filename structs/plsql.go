@@ -404,64 +404,10 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 		if pTyp[0] == '*' {
 			pTyp = pTyp[1:]
 		}
-		var outConv string
 		if tableSize == 0 {
-			if strings.HasSuffix(got, "__cur") {
-				outConv = fmt.Sprintf(`output.%s = %s{y}`, name, got)
-				if arg.Type == "REF CURSOR" {
-					pTyp = "*gocilib.Resultset"
-				}
-			} else if got == "string" {
-				outConv = fmt.Sprintf(`output.%s = y`, name)
-			} else if got[0] != '*' {
-				outConv = fmt.Sprintf(`output.%s = &y`, name)
-			} else {
-				outConv = fmt.Sprintf(`z := %s(y)
-            output.%s = &z`, pTyp, name)
+			if strings.HasSuffix(got, "__cur") && arg.Type == "REF CURSOR" {
+				pTyp = "*gocilib.Resultset"
 			}
-			convOut = append(convOut,
-				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"]
-                if err = v.GetValueInto(&x, 0); err != nil {
-                    err = fmt.Errorf("error getting value of %s: %%s", err)
-                    return
-                } else if x != `+nilS+` {
-					%s
-                    %s
-                }}
-                `, paramName, paramName, name, getOutConvTSwitch(name, pTyp), outConv))
-		} else {
-			if got == "string" {
-				outConv = fmt.Sprintf(`output.%s[i] = y`, name)
-			} else if got[0] != '*' {
-				outConv = fmt.Sprintf(`output.%s[i] = &y`, name)
-			} else {
-				outConv = fmt.Sprintf(`z := %s(y)
-            output.%s[i] = &z`, pTyp, name)
-			}
-			mk := ""
-			mk = fmt.Sprintf(`output.%s = output.%s[:cap(output.%s)]
-                if cap(output.%s) < v.Len() {
-                    output.%s = append(output.%s, make([]%s, v.Len()-cap(output.%s))...)
-                }`, name, name, name, name, name, name, got, name)
-			convOut = append(convOut,
-				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"]
-                %s
-                for i := 0; i < v.Len(); i++ {
-                    if err = v.GetValueInto(&x, uint(i)); err != nil {
-                        err = fmt.Errorf("error getting %%d. value into %s: %%s", i, err)
-                        return
-                    } else if x != `+nilS+` {
-						%s
-                        %s
-                    }
-                }
-            }
-            `, paramName, paramName,
-					mk,
-					name,
-					getOutConvTSwitch(name, pTyp), outConv))
 		}
 		if arg.IsInput() {
 			if tableSize == 0 {
@@ -470,12 +416,9 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 				}
 				convIn = append(convIn,
 					fmt.Sprintf(`if input.%s != `+nilS+` {
-                            if err = v.SetValue(0, `+deRef+`input.%s); err != nil {
-                                err = fmt.Errorf("error setting value %%v from %s: %%s", v, err)
-                                return
-                            }
+							v = `+deRef+`input.%s
                         }`,
-						name, name, name))
+						name, name))
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
 				}
@@ -484,12 +427,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 					convIn = append(convIn, preconcept2)
 				}
 				convIn = append(convIn,
-					fmt.Sprintf(`for i, x := range input.%s {
-                            if err = v.SetValue(uint(i), x); err != nil {
-                                err = fmt.Errorf("error setting value %%v[%%d] from %s: %%s", v, i, err)
-                                return
-                            }
-                        }`, name, name))
+					fmt.Sprintf(`v = input.%s`, name))
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
 				}
@@ -501,11 +439,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 				convIn = append(convIn, preconcept2)
 			}
 			convIn = append(convIn,
-				fmt.Sprintf(`if input.%s == `+nilS+` {
-						input.%s = new(%s)
-					}
-					v = &input.%s`,
-					name, name, oracleVarTypeName(arg.Type), name))
+				fmt.Sprintf(`v = &input.%s`, name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "} else { v = nil }")
 			}
@@ -606,66 +540,13 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 		if pTyp[0] == '*' {
 			pTyp = pTyp[1:]
 		}
-		var outConv string
-		if tableSize == 0 {
-			if got == "string" {
-				outConv = fmt.Sprintf(`output.%s = y`, name)
-			} else if got[0] != '*' {
-				outConv = fmt.Sprintf(`output.%s = &y`, name)
-			} else {
-				outConv = fmt.Sprintf(`z := %s(y)
-            output.%s = &z`, pTyp, name)
-			}
-			convOut = append(convOut,
-				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"]
-                if err = v.GetValueInto(&x, 0); err != nil {
-                    err = fmt.Errorf("error getting value of %s: %%s", err)
-                    return
-                } else if x != `+nilS+` {
-					%s
-                    %s
-                }}
-                `, paramName, paramName, name, getOutConvTSwitch(name, pTyp), outConv))
-		} else {
-			if got == "string" {
-				outConv = fmt.Sprintf(`output.%s[i].%s = y`, name, capitalize(key))
-			} else if got[0] != '*' {
-				outConv = fmt.Sprintf(`output.%s[i].%s = &y`, name, capitalize(key))
-			} else {
-				outConv = fmt.Sprintf(`z := %s(y)
-            output.%s[i].%s = &z`, pTyp, name, capitalize(key))
-			}
-			convOut = append(convOut,
-				fmt.Sprintf(`if params["%s"] != nil {
-                v = params["%s"]
-                for i := 0; i < v.Len(); i++ {
-                    if err = v.GetValueInto(&x, uint(i)); err != nil {
-                        err = fmt.Errorf("error getting %%d. value into %s%s: %%s", i, err)
-                        return
-                    } else if x != `+nilS+` {
-						%s
-                        %s
-                    }
-                }
-            }
-            `, paramName, paramName,
-					name, key,
-					getOutConvTSwitch(name, pTyp), outConv))
-		}
 		if arg.IsInput() {
 			if tableSize == 0 {
 				if preconcept2 != "" {
 					convIn = append(convIn, preconcept2)
 				}
 				convIn = append(convIn,
-					fmt.Sprintf(`if input.%s != `+nilS+` {
-                        if err = v.SetValue(0, `+deRef+`input.%s); err != nil {
-                            err = fmt.Errorf("error setting value %%v from %s: %%s", v, err)
-                            return
-                        }
-                        }`,
-						name, name, name))
+					fmt.Sprintf(`if input.%s != `+nilS+` { v = input.%s }`, name, name))
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
 				}
@@ -674,12 +555,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 					convIn = append(convIn, preconcept2)
 				}
 				convIn = append(convIn,
-					fmt.Sprintf(`for i, x := range input.%s {
-                        if err = v.SetValue(uint(i), x.%s); err != nil {
-                            err = fmt.Errorf("error setting value %%v[%%d] from %s%s: %%s", v, i, err)
-                            return
-                        }
-                        }`, name, capitalize(key), name, capitalize(key)))
+					fmt.Sprintf(`v = input.%s`, name))
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
 				}
