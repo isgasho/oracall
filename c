@@ -21,6 +21,8 @@ fi
 
 echo go test -connect=${dsn} ./...
 go test -connect=${dsn} ./...
+
+exit 0
 go build
 
 {

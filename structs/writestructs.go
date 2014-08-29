@@ -291,22 +291,22 @@ func genChecks(checks []string, arg Argument, types map[string]string, base stri
 				fmt.Sprintf(`if len(%s) > %d {
         return errors.New("%s is longer then accepted (%d)")
     }`,
-					name, arg.Charlength,
-					name, arg.Charlength))
+					name, arg.CharLength,
+					name, arg.CharLength))
 		case "*string":
 			checks = append(checks,
 				fmt.Sprintf(`if %s != nil && len(*%s) > %d {
         return errors.New("%s is longer then accepted (%d)")
     }`,
-					name, name, arg.Charlength,
-					name, arg.Charlength))
+					name, name, arg.CharLength,
+					name, arg.CharLength))
 		case "NullString", "sql.NullString":
 			checks = append(checks,
 				fmt.Sprintf(`if %s.Valid && len(%s.String) > %d {
         return errors.New("%s is longer then accepted (%d)")
     }`,
-					name, name, arg.Charlength,
-					name, arg.Charlength))
+					name, name, arg.CharLength,
+					name, arg.CharLength))
 		case "*int32", "*int64", "*float32", "*float64":
 			if arg.Precision > 0 {
 				cons := strings.Repeat("9", int(arg.Precision))

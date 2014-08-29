@@ -33,10 +33,15 @@ import (
 
 	"github.com/davecgh/go-spew/spew"
 	"github.com/tgulacsi/gocilib"
+	"gopkg.in/inconshreveable/log15.v2"
 )
 
 var flagConnect = flag.String("connect", "", "Oracle database connection string")
 var flagBypassMultipleArgs = flag.Bool("bypassmultipleargs", false, "bypass multiple args - experimental, probably worsens ORA-01008")
+
+func init() {
+	gocilib.Log.SetHandler(log15.StderrHandler)
+}
 
 func main() {
 	flag.Parse()

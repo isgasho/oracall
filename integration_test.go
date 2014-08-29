@@ -32,7 +32,13 @@ import (
 	"time"
 
 	"github.com/kylelemons/godebug/pretty"
+	"github.com/tgulacsi/gocilib"
+	"gopkg.in/inconshreveable/log15.v2"
 )
+
+func init() {
+	gocilib.Log.SetHandler(log15.StderrHandler)
+}
 
 // TestGen tests the generation - for this, it needs a dsn with privileges
 // if you get "ORA-01031: insufficient privileges", then you need
@@ -414,8 +420,9 @@ func compile(t *testing.T, qry string) {
 }
 
 func runCommand(t *testing.T, prog string, args ...string) {
-	out, err := exec.Command(prog, args...).CombinedOutput()
-	if err != nil {
+	cmd := exec.Command(prog, args...)
+	cmd.Stderr = os.Stderr
+	if out, err := cmd.Output(); err != nil {
 		t.Errorf("error '%q %s': %v\n%s", prog, args, err, out)
 		t.FailNow()
 	} else {

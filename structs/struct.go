@@ -70,7 +70,7 @@ type Argument struct {
 	Precision               uint8
 	Scale                   uint8
 	Charset                 string
-	Charlength              uint
+	CharLength              uint
 	TableOf                 *Argument           // this argument is a table (array) of this type
 	RecordOf                map[string]Argument //this argument is a record (map) of this type
 	goTypeName              string
@@ -130,7 +130,7 @@ func NewArgument(name, dataType, plsType, typeName, dirName string, dir uint8,
 
 	arg := Argument{Name: name, Type: dataType, PlsType: plsType,
 		TypeName: typeName, Direction: dir,
-		Precision: precision, Scale: scale, Charlength: charlength,
+		Precision: precision, Scale: scale, CharLength: charlength,
 		Charset: charset}
 	switch arg.Type {
 	case "PL/SQL RECORD":
@@ -145,14 +145,14 @@ func NewArgument(name, dataType, plsType, typeName, dirName string, dir uint8,
 
 	switch arg.Type {
 	case "CHAR", "NCHAR", "VARCHAR", "NVARCHAR", "VARCHAR2", "NVARCHAR2":
-		if arg.Charlength <= 0 {
+		if arg.CharLength <= 0 {
 			if strings.Index(arg.Type, "VAR") >= 0 {
-				arg.Charlength = 1000
+				arg.CharLength = 1000
 			} else {
-				arg.Charlength = 10
+				arg.CharLength = 10
 			}
 		}
-		arg.AbsType = fmt.Sprintf("%s(%d)", arg.Type, arg.Charlength)
+		arg.AbsType = fmt.Sprintf("%s(%d)", arg.Type, arg.CharLength)
 	case "NUMBER":
 		if arg.Scale > 0 {
 			arg.AbsType = fmt.Sprintf("NUMBER(%d, %d)", arg.Precision, arg.Scale)
