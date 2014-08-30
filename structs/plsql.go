@@ -38,7 +38,7 @@ func oracleVarTypeName(typ string) string {
 	case "BINARY_INTEGER", "PLS_INTEGER":
 		return "int32"
 	case "STRING", "VARCHAR2", "CHAR", "BINARY":
-		return "StringVar"
+		return "string"
 	case "INTEGER":
 		return "int64"
 	case "ROWID":
@@ -383,6 +383,26 @@ func (fun Function) prepareCall() (decls, pre []string, call string, post []stri
 	return
 }
 
+func notNullCheck(goType, name string) string {
+	if strings.HasPrefix(goType, "sql.Null") {
+		return name + ".Valid"
+	}
+	if goType == "string" {
+		return name + ` != "" `
+	}
+	return name + "!= nil"
+}
+
+func deRef(goType, name string) string {
+	if strings.HasPrefix(goType, "sql.Null") {
+		return name + "." + goType[8:]
+	}
+	if goType[0] == '*' {
+		return "*" + name
+	}
+	return name
+}
+
 func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]string,
 	name, paramName string, tableSize uint) ([]string, []string) {
 
@@ -392,19 +412,19 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 		preconcept = "input." + name[:strings.LastIndex(name, ".")] + " != nil &&"
 		preconcept2 = "if " + preconcept[:len(preconcept)-3] + " {"
 	}
-	nilS, deRef := `nil`, "*"
-	if got == "string" {
-		nilS, deRef = `""`, ""
-	}
-	isStringVar := false
+
 	if arg.IsOutput() {
-		if arg.CharLength > 0 && oracleVarTypeName(arg.Type) == "StringVar" {
+		if arg.IsInput() {
+			convIn = append(convIn,
+				fmt.Sprintf("output.%s = input.%s", name, name))
+		} else if got == "string" {
 			convIn = append(convIn,
 				fmt.Sprintf("v = gocilib.NewStringVar(\"\", %d)", arg.CharLength))
-			isStringVar = true
+			convOut = append(convOut,
+				fmt.Sprintf("if params[%q] != nil { output.%s = params[%q].(*gocilib.StringVar).String() }", paramName, name, paramName))
 		} else {
 			convIn = append(convIn,
-				fmt.Sprintf(`v = new(%s)`, oracleVarTypeName(arg.Type)))
+				fmt.Sprintf("v = &output.%s", name))
 		}
 		pTyp := got
 		if pTyp[0] == '*' {
@@ -419,16 +439,6 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 			if tableSize == 0 {
 				if preconcept2 != "" {
 					convIn = append(convIn, preconcept2)
-				}
-				if isStringVar {
-					convIn = append(convIn,
-						fmt.Sprintf(`v.(*gocilib.StringVar).Set(`+deRef+`input.%s)`, name))
-				} else {
-					convIn = append(convIn,
-						fmt.Sprintf(`if input.%s != `+nilS+` {
-							v = `+deRef+`input.%s
-                        }`,
-							name, name))
 				}
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
@@ -450,7 +460,7 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 				convIn = append(convIn, preconcept2)
 			}
 			convIn = append(convIn,
-				fmt.Sprintf(`v = &input.%s`, name))
+				fmt.Sprintf(`v = input.%s`, name))
 			if preconcept2 != "" {
 				convIn = append(convIn, "} else { v = nil }")
 			}
@@ -462,21 +472,24 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 			if subGoType[0] == '*' {
 				subGoType = subGoType[1:]
 			}
-			convIn = append(convIn,
-				fmt.Sprintf(`{
-                var a []%s
-                if len(input.%s) == 0 {
-                    a = make([]%s, 0)
-                } else {
-                    a = make([]%s, len(input.%s))
-                    for i, x := range input.%s {
-                        if x != `+nilS+` { a[i] = `+deRef+`x }
-                    }
-                }
-                v = a
-                }
-                    `,
-					subGoType, name, subGoType, subGoType, name, name))
+			/*
+							convIn = append(convIn,
+								fmt.Sprintf(`{
+				                var a []%s
+				                if len(input.%s) == 0 {
+				                    a = make([]%s, 0)
+				                } else {
+				                    a = make([]%s, len(input.%s))
+				                    for i, x := range input.%s {
+				                        if `+notNullCheck(got, "x")+` { a[i] = `+deRef(got, "x")+` }
+				                    }
+				                }
+				                v = a
+				                }
+				                    `,
+									subGoType, name, subGoType, subGoType, name, name))
+			*/
+			convIn = append(convIn, "v = input."+name)
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}
@@ -540,20 +553,13 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 		preconcept = "input." + name[:strings.LastIndex(name, ".")] + " != nil &&"
 		preconcept2 = "if " + preconcept[:len(preconcept)-3] + " {"
 	}
-	nilS, deRef := `nil`, "*"
-	if arg.goType(types) == "string" {
-		nilS, deRef = `""`, ""
-	}
-	isStringVar := false
 	if arg.IsOutput() {
-		if oracleVarTypeName(arg.Type) == "StringVar" {
+		if arg.IsInput() {
 			convIn = append(convIn,
-				fmt.Sprintf(`v = gocilib.NewStringVar("", %d)`, arg.CharLength))
-			isStringVar = true
-		} else {
-			convIn = append(convIn,
-				fmt.Sprintf(`v = new(%s)`, oracleVarTypeName(arg.Type)))
+				fmt.Sprintf("input.%s = output.%s", name, name))
 		}
+		convIn = append(convIn,
+			fmt.Sprintf(`v = &output.%s`, name))
 		pTyp := got
 		if pTyp[0] == '*' {
 			pTyp = pTyp[1:]
@@ -562,13 +568,6 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 			if tableSize == 0 {
 				if preconcept2 != "" {
 					convIn = append(convIn, preconcept2)
-				}
-				if isStringVar {
-					convIn = append(convIn,
-						fmt.Sprintf(`v.(*gocilib.StringVar).Set(`+deRef+`input.%s)`, name))
-				} else {
-					convIn = append(convIn,
-						fmt.Sprintf(`if input.%s != `+nilS+` { v = input.%s }`, name, name))
 				}
 				if preconcept2 != "" {
 					convIn = append(convIn, "}")
@@ -590,12 +589,7 @@ func (arg Argument) getConvRec(convIn, convOut []string,
 				convIn = append(convIn, preconcept2)
 			}
 			convIn = append(convIn,
-				fmt.Sprintf(`if input.%s != `+nilS+` {
-                        v = input.%s
-                    } else {
-                        v = %s
-					}`,
-					name, name, oracleVarZero(arg.Type)))
+				"v = input."+name)
 			if preconcept2 != "" {
 				convIn = append(convIn, "} else { v = nil }")
 			}
@@ -615,14 +609,15 @@ func (arg Argument) getConvRec(convIn, convOut []string,
                 } else {
                     a = make([]%s, len(input.%s))
                     for i, x := range input.%s {
-                        if x != nil && x.%s != `+nilS+` { a[i] = `+deRef+`(x.%s) }
+                   if x != nil && `+notNullCheck(got, "x."+capitalize(key))+` {
+							a[i] = `+deRef(got, "x."+capitalize(key))+` }
                     }
                 }
                 v = a
                 }
                     `,
 					subGoType, name, subGoType, subGoType, name, name,
-					capitalize(key), capitalize(key)))
+				))
 			if preconcept2 != "" {
 				convIn = append(convIn, "}")
 			}

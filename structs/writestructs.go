@@ -38,6 +38,7 @@ func SaveFunctions(dst io.Writer, functions []Function, pkg string, skipFormatti
 		if _, err = fmt.Fprintf(dst,
 			"package "+pkg+`
 import (
+	"database/sql"
 	"database/sql/driver"
     "encoding/json"
     "errors"
@@ -59,6 +60,7 @@ var _ strconv.NumError
 var _ strings.Reader
 var _ = errors.New
 var _ driver.Value
+var _ sql.NullBool
 
 // FunctionCaller is a function which calls the stored procedure with
 // the input struct, and returns the output struct as an interface{}
@@ -395,13 +397,13 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		case "CHAR", "VARCHAR2":
 			return "string" // NULL is the same as the empty string for Oracle
 		case "NUMBER":
-			return "*float64"
+			return "sql.NullFloat64"
 		case "INTEGER":
-			return "*int64"
+			return "sql.NullInt64"
 		case "PLS_INTEGER", "BINARY_INTEGER":
-			return "*int32"
+			return "sql.NullInt64"
 		case "BOOLEAN", "PL/SQL BOOLEAN":
-			return "*bool"
+			return "sql.NullBool"
 		case "DATE", "DATETIME", "TIME", "TIMESTAMP":
 			return "*time.Time"
 		case "REF CURSOR":
@@ -409,7 +411,7 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		case "CLOB", "BLOB":
 			return "*oracle.ExternalLobVar"
 		case "ROWID":
-			return "*string"
+			return "string"
 		default:
 			log.Fatalf("unknown simple type %s (%s)", arg.Type, arg)
 		}
