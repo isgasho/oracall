@@ -45,12 +45,12 @@ func oracleVarTypeName(typ string) string {
 		return "[10]byte"
 	case "REF CURSOR":
 		return "gocilib.Cursor"
-	//case "TIMESTAMP":
-	//return "time.Time"
+	case "TIMESTAMP":
+		return "sqlhlp.NullTime"
 	case "NUMBER":
 		return "float64"
 	case "DATE":
-		return "time.Time"
+		return "sqlhlp.NullTime"
 	case "BLOB":
 		return "gocilib.LOB"
 	case "CLOB":
@@ -63,6 +63,7 @@ func oracleVarTypeName(typ string) string {
 	return ""
 }
 
+/*
 func oracleVarZero(typ string) string {
 	switch typ {
 	case "BINARY_INTEGER", "PLS_INTEGER":
@@ -90,6 +91,7 @@ func oracleVarZero(typ string) string {
 	}
 	return ""
 }
+*/
 
 // SavePlsqlBlock saves the plsql block definition into writer
 func (fun Function) PlsqlBlock() (plsql, callFun string) {

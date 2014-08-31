@@ -405,7 +405,7 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		case "BOOLEAN", "PL/SQL BOOLEAN":
 			return "sqlhlp.NullBool"
 		case "DATE", "DATETIME", "TIME", "TIMESTAMP":
-			return "time.Time"
+			return "sqlhlp.NullTime"
 		case "REF CURSOR":
 			return "*gocilib.Connection"
 		case "CLOB", "BLOB":
