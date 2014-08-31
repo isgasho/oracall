@@ -419,6 +419,13 @@ func (arg Argument) getConvSimple(convIn, convOut []string, types map[string]str
 		if arg.IsInput() {
 			convIn = append(convIn,
 				fmt.Sprintf("output.%s = input.%s", name, name))
+			if got == "string" {
+				convIn = append(convIn,
+					fmt.Sprintf("v = gocilib.NewStringVar(input.%s, %d)", name, arg.CharLength))
+			} else {
+				convIn = append(convIn,
+					fmt.Sprintf("v = &output.%s", name))
+			}
 		} else if got == "string" {
 			convIn = append(convIn,
 				fmt.Sprintf("v = gocilib.NewStringVar(\"\", %d)", arg.CharLength))
