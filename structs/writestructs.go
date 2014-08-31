@@ -38,7 +38,6 @@ func SaveFunctions(dst io.Writer, functions []Function, pkg string, skipFormatti
 		if _, err = fmt.Fprintf(dst,
 			"package "+pkg+`
 import (
-	"database/sql"
 	"database/sql/driver"
     "encoding/json"
     "errors"
@@ -49,6 +48,7 @@ import (
     "time"    // for datetimes
 
     "github.com/tgulacsi/gocilib"    // Oracle
+	"github.com/tgulacsi/gocilib/sqlhlp" // NullBool
 )
 
 var DebugLevel = uint(0)
@@ -60,7 +60,7 @@ var _ strconv.NumError
 var _ strings.Reader
 var _ = errors.New
 var _ driver.Value
-var _ sql.NullBool
+var _ sqlhlp.NullBool
 
 // FunctionCaller is a function which calls the stored procedure with
 // the input struct, and returns the output struct as an interface{}
@@ -302,7 +302,7 @@ func genChecks(checks []string, arg Argument, types map[string]string, base stri
     }`,
 					name, name, arg.CharLength,
 					name, arg.CharLength))
-		case "NullString", "sql.NullString":
+		case "NullString", "sqlhlp.NullString", "sql.NullString":
 			checks = append(checks,
 				fmt.Sprintf(`if %s.Valid && len(%s.String) > %d {
         return errors.New("%s is longer then accepted (%d)")
@@ -329,7 +329,7 @@ func genChecks(checks []string, arg Argument, types map[string]string, base stri
 						name, cons, name, cons,
 						name, cons, cons))
 			}
-		case "NullInt64", "NullFloat64", "sql.NullInt64", "sql.NullFloat64":
+		case "NullInt64", "sqlhlp.NullInt64", "sql.NullInt64", "NullFloat64", "sqlhlp.NullFloat64", "sql.NullFloat64":
 			if arg.Precision > 0 {
 				vn := got[strings.Index(got, "Null")+4:]
 				cons := strings.Repeat("9", int(arg.Precision))
@@ -397,15 +397,15 @@ func (arg *Argument) goType(typedefs map[string]string) (typName string) {
 		case "CHAR", "VARCHAR2":
 			return "string" // NULL is the same as the empty string for Oracle
 		case "NUMBER":
-			return "sql.NullFloat64"
+			return "sqlhlp.NullFloat64"
 		case "INTEGER":
-			return "sql.NullInt64"
+			return "sqlhlp.NullInt64"
 		case "PLS_INTEGER", "BINARY_INTEGER":
-			return "sql.NullInt64"
+			return "sqlhlp.NullInt64"
 		case "BOOLEAN", "PL/SQL BOOLEAN":
-			return "sql.NullBool"
+			return "sqlhlp.NullBool"
 		case "DATE", "DATETIME", "TIME", "TIMESTAMP":
-			return "*time.Time"
+			return "time.Time"
 		case "REF CURSOR":
 			return "*gocilib.Connection"
 		case "CLOB", "BLOB":

@@ -384,7 +384,7 @@ func (fun Function) prepareCall() (decls, pre []string, call string, post []stri
 }
 
 func notNullCheck(goType, name string) string {
-	if strings.HasPrefix(goType, "sql.Null") {
+	if strings.HasPrefix(goType, "Null") {
 		return name + ".Valid"
 	}
 	if goType == "string" {
@@ -394,7 +394,7 @@ func notNullCheck(goType, name string) string {
 }
 
 func deRef(goType, name string) string {
-	if strings.HasPrefix(goType, "sql.Null") {
+	if strings.HasPrefix(goType, "Null") {
 		return name + "." + goType[8:]
 	}
 	if goType[0] == '*' {
