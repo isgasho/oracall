@@ -22,12 +22,15 @@ import (
 )
 
 const (
-	MarkNull = "␀" // 0x2400 = nul
-	//MarkValid  = "滿" // 0x6eff = fill; full, satisfied
-	MarkValid  = "Valid" // 0x6eff = fill; full, satisfied
-	MarkHidden = "匿"     // 0x533f = hide
+	// MarkNull marks the null = 0x2400 = nul
+	MarkNull = "␀"
+	// MarkValid  = 滿 = 0x6eff = fill; full, satisfied
+	MarkValid = "Valid"
+	// MarkHidden = 匿 = 0x533f = hide
+	MarkHidden = "匿"
 )
 
+// Function is a function of a package with arguments.
 type Function struct {
 	Package, name string
 	Returns       *Argument
@@ -35,6 +38,7 @@ type Function struct {
 	types         map[string]string
 }
 
+// Name returns the full name (with package) of the function.
 func (f Function) Name() string {
 	if f.Package == "" {
 		return strings.ToLower(f.name)
@@ -42,6 +46,7 @@ func (f Function) Name() string {
 	return unocap(f.Package) + "." + strings.ToLower(f.name)
 }
 
+// String returns a nice string representation of the function.
 func (f Function) String() string {
 	args := make([]string, len(f.Args))
 	for i := range args {
@@ -51,14 +56,20 @@ func (f Function) String() string {
 }
 
 const (
-	DIR_IN  = 1
+	// DIR_IN is the direction if input
+	DIR_IN = 1
+	// DIR_OUT is the direction of output
 	DIR_OUT = 2
 
+	// FLAVOR_SIMPLE is the simple kind (scalars)
 	FLAVOR_SIMPLE = 0
+	// FLAVOR_RECORD is the kind of a record
 	FLAVOR_RECORD = 1
-	FLAVOR_TABLE  = 2
+	// FLAVOR_TABLE is the kind of a table
+	FLAVOR_TABLE = 2
 )
 
+// Argument holds info about an argument (of a function).
 type Argument struct {
 	Name   string
 	Flavor uint8
@@ -76,6 +87,7 @@ type Argument struct {
 	goTypeName              string
 }
 
+// String returns the string representation of the argument.
 func (a Argument) String() string {
 	typ := a.Type
 	switch a.Flavor {
@@ -96,13 +108,17 @@ func (a Argument) String() string {
 	return a.Name + " " + dir + " " + typ
 }
 
+// IsInput returns whether the argument is for input.
 func (a Argument) IsInput() bool {
 	return a.Direction&DIR_IN > 0
 }
+
+// IsOutput returns whether the argument is for output.
 func (a Argument) IsOutput() bool {
 	return a.Direction&DIR_OUT > 0
 }
 
+// NewArgument returns a new argument from the given info.
 func NewArgument(name, dataType, plsType, typeName, dirName string, dir uint8,
 	charset string, precision, scale uint8, charlength uint) Argument {
 

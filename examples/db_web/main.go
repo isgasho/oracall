@@ -27,12 +27,12 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
-	"reflect"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
+	"reflect"
 	"strings"
 
 	"github.com/tgulacsi/gocilib"
@@ -153,15 +153,16 @@ func logout(cur *oracle.Cursor, sessionID string) error {
 	return err
 }
 
+// StructSet sets the element of the struct.
 func StructSet(st interface{}, key string, value interface{}) error {
 	v := reflect.ValueOf(st)
 	if v.Kind() == reflect.Ptr {
 		v = v.Elem()
 	}
-	fv :=	v.FieldByName(key)
+	fv := v.FieldByName(key)
 	if fv.Kind() == reflect.Ptr {
 		fv = fv.Elem()
 	}
-		fv.Set(reflect.ValueOf(value))
+	fv.Set(reflect.ValueOf(value))
 	return nil
 }

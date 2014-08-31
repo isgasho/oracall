@@ -29,8 +29,12 @@ import (
 )
 
 var _ = glog.Infof
+
+// ErrMissingTableOf is the error of missing TableOf information.
 var ErrMissingTableOf = errors.New("missing TableOf info")
 
+// SaveFunctions writes the given functions to the given writer.
+// If skipFormatting is true, then it won't call format on it (for de-bugging).
 func SaveFunctions(dst io.Writer, functions []Function, pkg string, skipFormatting bool) error {
 	var err error
 
@@ -183,6 +187,8 @@ func (f Function) getStructName(out bool) string {
 	return capitalize(f.Package + "__" + f.name + "__" + dirname)
 }
 
+// SaveStruct writes the struct go the writer.
+// Iff out, then the output struct is written - otherwise the input.
 func (f Function) SaveStruct(dst io.Writer, out bool) error {
 	//glog.Infof("f=%s", f)
 	dirmap, dirname := uint8(DIR_IN), "input"

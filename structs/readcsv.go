@@ -56,7 +56,7 @@ type UserArgument struct {
 	TypeSubname string `sql:"TYPE_SUBNAME"`
 }
 
-// ParseCsv reads the given csv file as user_arguments
+// ParseCsvFile reads the given csv file as user_arguments
 // The csv should be an export of
 /*
    SELECT object_id, subprogram_id, package_name, object_name,
@@ -191,6 +191,7 @@ func ReadCsv(r io.Reader, userArgs chan<- UserArgument) error {
 	return nil
 }
 
+// ParseArguments parses the arguments received on the channel, and builds up the functions.
 func ParseArguments(userArgs <-chan UserArgument) (functions []Function, err error) {
 	var (
 		level    uint8

@@ -93,7 +93,7 @@ func oracleVarZero(typ string) string {
 }
 */
 
-// SavePlsqlBlock saves the plsql block definition into writer
+// PlsqlBlock returns the plsql block definition.
 func (fun Function) PlsqlBlock() (plsql, callFun string) {
 	decls, pre, call, post, convIn, convOut, err := fun.prepareCall()
 	if err != nil {
