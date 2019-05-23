@@ -284,7 +284,7 @@ func AsDate(v interface{}) *DateTime {
 		if d == nil {
 			return new(DateTime)
 		}
-		return &DateTime{Time: *d}
+		return (*DateTime)(d)
 	case *DateTime:
 		if d == nil {
 			return new(DateTime)
@@ -296,9 +296,9 @@ func AsDate(v interface{}) *DateTime {
 	case DateTime:
 		*d = x
 	case time.Time:
-		d.Time = x
+		*d = DateTime(x)
 	case string:
-		_ = ParseTime(&d.Time, x)
+		_ = ParseTime((*time.Time)(d), x)
 	default:
 		log.Printf("WARN: unknown Date type %T", v)
 	}
@@ -313,5 +313,5 @@ func AsTime(v interface{}) time.Time {
 	if t, ok := v.(time.Time); ok {
 		return t
 	}
-	return AsDate(v).Time
+	return time.Time(*(AsDate(v)))
 }
